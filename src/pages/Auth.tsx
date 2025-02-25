@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -13,29 +13,62 @@ const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
 
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/");
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
+  const validateForm = () => {
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      return false;
+    }
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return false;
+    }
+    if (!email.includes("@")) {
+      toast.error("Please enter a valid email address");
+      return false;
+    }
+    return true;
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) return;
+    
     setLoading(true);
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
         });
-        if (error) throw error;
+        
+        if (signUpError) throw signUpError;
         toast.success("Check your email to confirm your account!");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
+        
+        if (signInError) throw signInError;
         navigate("/");
         toast.success("Successfully logged in!");
       }
     } catch (error) {
       if (error instanceof Error) {
+        console.error("Auth error:", error);
         toast.error(error.message);
       }
     } finally {
@@ -44,12 +77,12 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen pt-24 px-4 flex items-center justify-center">
+    <div className="min-h-screen pt-24 px-4 flex items-center justify-center bg-gradient-to-b from-background/10 to-background">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="glass-panel w-full max-w-md p-8 rounded-xl"
+        className="glass-panel w-full max-w-md p-8 rounded-xl shadow-2xl"
       >
         <h1 className="text-3xl font-bold mb-6 text-gradient text-center">
           {isSignUp ? "Create Account" : "Welcome Back"}
@@ -85,7 +118,7 @@ const Auth = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors duration-200 flex items-center justify-center space-x-2"
+            className="w-full py-3 px-4 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             <span>{isSignUp ? "Sign Up" : "Sign In"}</span>
