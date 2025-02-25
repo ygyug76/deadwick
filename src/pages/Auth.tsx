@@ -13,15 +13,31 @@ const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
 
-  // Check if user is already logged in
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Session check error:", error);
+        return;
+      }
       if (session) {
         navigate("/");
       }
     };
     checkSession();
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === "SIGNED_IN" && session) {
+          navigate("/");
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const validateForm = () => {
@@ -49,27 +65,45 @@ const Auth = () => {
 
     try {
       if (isSignUp) {
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth`,
+          },
         });
         
         if (signUpError) throw signUpError;
-        toast.success("Check your email to confirm your account!");
+
+        if (data?.user?.identities?.length === 0) {
+          toast.error("This email is already registered. Please sign in instead.");
+          setIsSignUp(false);
+        } else {
+          toast.success("Check your email to confirm your account!");
+        }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         
-        if (signInError) throw signInError;
-        navigate("/");
-        toast.success("Successfully logged in!");
+        if (signInError) {
+          if (signInError.message.includes("Invalid login credentials")) {
+            toast.error("Invalid email or password. Please try again.");
+          } else {
+            throw signInError;
+          }
+          return;
+        }
+
+        // Success will be handled by onAuthStateChange
       }
     } catch (error) {
+      console.error("Auth error:", error);
       if (error instanceof Error) {
-        console.error("Auth error:", error);
         toast.error(error.message);
+      } else {
+        toast.error("An unexpected error occurred");
       }
     } finally {
       setLoading(false);
