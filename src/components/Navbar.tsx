@@ -1,12 +1,40 @@
 
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [session, setSession] = useState<any>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error(error.message);
+    } else {
+      navigate("/");
+      toast.success("Successfully logged out!");
+    }
+  };
 
   const navItems = [
     { label: "Home", path: "/" },
@@ -30,7 +58,7 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex space-x-8">
+          <div className="hidden md:flex items-center space-x-8">
             {navItems.map((item) => (
               <Link
                 key={item.path}
@@ -51,6 +79,23 @@ const Navbar = () => {
                 {item.label}
               </Link>
             ))}
+            {session ? (
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 text-gray-300 hover:text-purple-400 transition-colors duration-200"
+              >
+                <LogOut className="h-5 w-5" />
+                <span>Logout</span>
+              </button>
+            ) : (
+              <Link
+                to="/auth"
+                className="flex items-center space-x-2 text-gray-300 hover:text-purple-400 transition-colors duration-200"
+              >
+                <User className="h-5 w-5" />
+                <span>Login</span>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Navigation Button */}
@@ -88,6 +133,31 @@ const Navbar = () => {
                   {item.label}
                 </Link>
               ))}
+              {session ? (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-md text-gray-300 hover:text-purple-400 hover:bg-white/5 transition-colors duration-200"
+                >
+                  <div className="flex items-center space-x-2">
+                    <LogOut className="h-5 w-5" />
+                    <span>Logout</span>
+                  </div>
+                </button>
+              ) : (
+                <Link
+                  to="/auth"
+                  className="block px-3 py-2 rounded-md text-gray-300 hover:text-purple-400 hover:bg-white/5 transition-colors duration-200"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <div className="flex items-center space-x-2">
+                    <User className="h-5 w-5" />
+                    <span>Login</span>
+                  </div>
+                </Link>
+              )}
             </div>
           </motion.div>
         )}
