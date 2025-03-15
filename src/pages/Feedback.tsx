@@ -5,12 +5,27 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Define the feedback type to match our database schema
+interface Testimonial {
+  name: string;
+  role: string;
+  message: string;
+  rating: number;
+}
+
+interface FeedbackData {
+  name: string;
+  message: string;
+  user_id?: string | null;
+  is_public: boolean;
+}
+
 const Feedback = () => {
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [rating, setRating] = useState(5);
   const [loading, setLoading] = useState(false);
-  const [testimonials, setTestimonials] = useState([
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([
     {
       name: "Sarah Johnson",
       role: "Product Manager",
@@ -83,14 +98,21 @@ const Feedback = () => {
     setLoading(true);
     
     try {
+      // Construct feedback data object
+      const feedbackData: FeedbackData = {
+        name,
+        message,
+        is_public: false // Admin will review before making public
+      };
+
+      // Add user_id if user is authenticated
+      if (userId) {
+        feedbackData.user_id = userId;
+      }
+      
       const { error } = await supabase
         .from('feedback')
-        .insert({
-          name,
-          message,
-          user_id: userId,
-          is_public: false // Admin will review before making public
-        });
+        .insert(feedbackData);
       
       if (error) throw error;
       
