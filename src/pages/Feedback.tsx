@@ -18,6 +18,7 @@ interface FeedbackData {
   message: string;
   user_id?: string | null;
   is_public: boolean;
+  rating?: number;
 }
 
 const Feedback = () => {
@@ -63,7 +64,7 @@ const Feedback = () => {
     const fetchTestimonials = async () => {
       const { data, error } = await supabase
         .from('feedback')
-        .select('name, message, created_at')
+        .select('name, message, created_at, rating')
         .eq('is_public', true)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -78,7 +79,7 @@ const Feedback = () => {
           name: item.name,
           role: "User",
           message: item.message,
-          rating: 5,
+          rating: item.rating || 5,
         }));
         setTestimonials(formattedTestimonials);
       }
@@ -98,14 +99,15 @@ const Feedback = () => {
     setLoading(true);
     
     try {
-      // Construct feedback data object
+      // Construct feedback data object - Don't include user_id if not authenticated
       const feedbackData: FeedbackData = {
         name,
         message,
+        rating,
         is_public: false // Admin will review before making public
       };
 
-      // Add user_id if user is authenticated
+      // Only include user_id if it exists
       if (userId) {
         feedbackData.user_id = userId;
       }
@@ -114,7 +116,10 @@ const Feedback = () => {
         .from('feedback')
         .insert(feedbackData);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error submitting feedback:", error);
+        throw error;
+      }
       
       toast.success("Thank you for your feedback!");
       setName("");
