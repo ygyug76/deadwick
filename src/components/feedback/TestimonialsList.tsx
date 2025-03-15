@@ -30,26 +30,30 @@ export const TestimonialsList = () => {
   // Fetch public testimonials from Supabase
   useEffect(() => {
     const fetchTestimonials = async () => {
-      const { data, error } = await supabase
-        .from('feedback')
-        .select('name, message, created_at, rating')
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      if (error) {
-        console.error("Error fetching testimonials:", error);
-        return;
-      }
-      
-      if (data && data.length > 0) {
-        const formattedTestimonials = data.map(item => ({
-          name: item.name,
-          role: "User",
-          message: item.message,
-          rating: item.rating || 5,
-        }));
-        setTestimonials(formattedTestimonials);
+      try {
+        const { data, error } = await supabase
+          .from('feedback')
+          .select('name, message, created_at, rating')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false })
+          .limit(5);
+        
+        if (error) {
+          console.error("Error fetching testimonials:", error);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          const formattedTestimonials = data.map(item => ({
+            name: item.name,
+            role: "User",
+            message: item.message,
+            rating: item.rating || 5,
+          }));
+          setTestimonials(formattedTestimonials);
+        }
+      } catch (err) {
+        console.error("Failed to fetch testimonials:", err);
       }
     };
     
