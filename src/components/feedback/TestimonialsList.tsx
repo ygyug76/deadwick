@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Testimonial } from "@/types/feedback";
 import { TestimonialCard } from "./TestimonialCard";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const TestimonialsList = () => {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([
@@ -40,6 +41,7 @@ export const TestimonialsList = () => {
         
         if (error) {
           console.error("Error fetching testimonials:", error);
+          toast.error("Could not load testimonials");
           return;
         }
         
@@ -48,12 +50,13 @@ export const TestimonialsList = () => {
             name: item.name,
             role: "User",
             message: item.message,
-            rating: item.rating || 5,
+            rating: item.rating || 5, // Default to 5 if rating is null
           }));
           setTestimonials(formattedTestimonials);
         }
       } catch (err) {
         console.error("Failed to fetch testimonials:", err);
+        toast.error("Could not load testimonials");
       }
     };
     
