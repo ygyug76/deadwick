@@ -89,6 +89,7 @@ const Pricing = () => {
             </ul>
             <Link
               to="/payment"
+              state={{ plan }}
               className="block w-full text-center mt-8 px-6 py-3 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors duration-200 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40"
             >
               Get Started
@@ -101,4 +102,3 @@ const Pricing = () => {
 };
 
 export default Pricing;
-

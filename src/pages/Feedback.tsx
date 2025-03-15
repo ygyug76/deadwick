@@ -1,14 +1,16 @@
 
 import { motion } from "framer-motion";
-import { MessageSquare, Star, ThumbsUp } from "lucide-react";
-import { useState } from "react";
+import { MessageSquare, Star, ThumbsUp, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Feedback = () => {
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [rating, setRating] = useState(5);
-
-  const testimonials = [
+  const [loading, setLoading] = useState(false);
+  const [testimonials, setTestimonials] = useState([
     {
       name: "Sarah Johnson",
       role: "Product Manager",
@@ -27,7 +29,82 @@ const Feedback = () => {
       message: "Intuitive interface and powerful features",
       rating: 4,
     },
-  ];
+  ]);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Check for logged in user
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUserId(session.user.id);
+      }
+    };
+    getUser();
+  }, []);
+
+  // Fetch public testimonials from Supabase
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      const { data, error } = await supabase
+        .from('feedback')
+        .select('name, message, created_at')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) {
+        console.error("Error fetching testimonials:", error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        const formattedTestimonials = data.map(item => ({
+          name: item.name,
+          role: "User",
+          message: item.message,
+          rating: 5,
+        }));
+        setTestimonials(formattedTestimonials);
+      }
+    };
+    
+    fetchTestimonials();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name || !message) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase
+        .from('feedback')
+        .insert({
+          name,
+          message,
+          user_id: userId,
+          is_public: false // Admin will review before making public
+        });
+      
+      if (error) throw error;
+      
+      toast.success("Thank you for your feedback!");
+      setName("");
+      setMessage("");
+      setRating(5);
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      toast.error("Failed to submit feedback. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen pt-24 px-4">
@@ -83,7 +160,7 @@ const Feedback = () => {
             className="glass-panel p-8 rounded-xl"
           >
             <h2 className="text-2xl font-bold mb-6">Share Your Feedback</h2>
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label className="block text-sm font-medium mb-2">Name</label>
                 <input
@@ -91,6 +168,7 @@ const Feedback = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  required
                 />
               </div>
               <div>
@@ -100,6 +178,7 @@ const Feedback = () => {
                   onChange={(e) => setMessage(e.target.value)}
                   rows={4}
                   className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  required
                 />
               </div>
               <div>
@@ -121,9 +200,17 @@ const Feedback = () => {
               </div>
               <button
                 type="submit"
-                className="w-full px-6 py-3 rounded-lg bg-white text-background hover:bg-gray-200 transition-colors duration-200"
+                className="w-full px-6 py-3 rounded-lg bg-white text-background hover:bg-gray-200 transition-colors duration-200 flex items-center justify-center disabled:opacity-70"
+                disabled={loading}
               >
-                Submit Feedback
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Feedback"
+                )}
               </button>
             </form>
           </motion.div>

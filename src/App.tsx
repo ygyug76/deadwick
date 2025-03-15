@@ -8,6 +8,7 @@ import Navbar from "./components/Navbar";
 import Index from "./pages/Index";
 import Preview from "./pages/Preview";
 import Pricing from "./pages/Pricing";
+import Payment from "./pages/Payment";
 import Feedback from "./pages/Feedback";
 import About from "./pages/About";
 import Auth from "./pages/Auth";
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/preview" element={<Preview />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/payment" element={<Payment />} />
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/about" element={<About />} />
           <Route path="/auth" element={<Auth />} />
